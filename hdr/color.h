@@ -8,4 +8,14 @@
     #include "vec3.hpp"
 #endif
 
-void write_color(std::ostream& out, const color& pixel_color);
+#ifndef USEFUL_H
+#define USEFUL_H
+    #include "useful.h"
+#endif
+
+#ifndef CMATH
+#define CMATH
+    #include <cmath>
+#endif
+
+void write_color(std::ostream& out, const color& pixel_color, int samples_per_pixel);

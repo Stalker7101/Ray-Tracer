@@ -13,10 +13,11 @@ class sphere : public hittable {
 public:
 
     sphere() = default;
-    sphere(const point3& cen, double r);
+    sphere(const point3& cen, double r, const std::shared_ptr<const material>& m);
 
     const point3& get_center() const;
     double get_radius() const;
+    const std::shared_ptr<const material>& get_material() const;
 
     bool hit(const ray& r, double t_min, double t_max,
              hit_record& rec) const override;
@@ -27,4 +28,5 @@ protected:
 
     point3 center;
     double radius;
+    std::shared_ptr<const material> mat_ptr;
 };

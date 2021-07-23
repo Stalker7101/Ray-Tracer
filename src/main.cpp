@@ -43,13 +43,42 @@
     #include "../hdr/hittable_list.h"
 #endif
 
-color ray_color(const ray& r, const hittable& world) {
+#ifndef CAMERA_H
+#define CAMERA_H
+    #include "../hdr/camera.h"
+#endif
+
+#ifndef LAMBERTIAL_H
+#define LAMBERTIAL_H
+    #include "../hdr/lambertian.h"
+#endif
+
+#ifndef METAL_H
+#define METAL_H
+    #include "../hdr/metal.h"
+#endif
+
+color ray_color(const ray& r, const hittable& world, int depth) {
+
+    // if we've exceeded the ray bounce limit, no more light is gathered
+    if (depth <= 0) {
+        
+        return color(0.0, 0.0, 0.0);
+    }
 
     hit_record rec;
 
-    if (world.hit(r, 0, infinity, rec)) {
+    if (world.hit(r, 0.001, infinity, rec)) {
+        
+        ray scattered;
+        color attenuation;
 
-        return 0.5 * static_cast<color>(rec.normal + vec3<>(1.0, 1.0, 1.0));
+        if (rec.mat_ptr->scatter(r, rec, attenuation, scattered)) {
+
+            return attenuation * ray_color(scattered, world, depth - 1);
+        }
+
+        return color(0.0, 0.0, 0.0);
     }
 
     vec3<> unit_direction = unit_vector(r.direction());
@@ -67,29 +96,31 @@ int main (int argc, char * argv[]) {
     // Image
 
     const double aspect_ratio = 16.0 / 9.0;
-    const int image_width = 960;
+    const int image_width = 1920;
     const int image_height
         = static_cast<int>(static_cast<double>(image_width) / aspect_ratio);
+
+    const int samples_per_pixel = 100;
+    const int max_depth = 50;
 
     // World
     
     hittable_list world;
-    world.add(std::make_shared<sphere>(point3(0, 0, -1), 0.5));
-    world.add(std::make_shared<sphere>(point3(0, -100.5, -1), 100));
-    world.add(std::make_shared<sphere>(point3(1, 0, -2), 0.5));
+
+    auto material_ground = std::make_shared<lambertian>(color(0.8, 0.8, 0.0));
+    auto material_center = std::make_shared<metal>(color(0.7, 0.3, 0.3), 0.0);
+    auto material_left   = std::make_shared<lambertian>(color(0.4, 0.6, 0.3));
+    auto material_right  = std::make_shared<metal>(color(0.8, 0.6, 0.2), 1.0);
+
+    world.add(std::make_shared<sphere>(point3(0, -100.5, -1), 100, material_ground));
+    world.add(std::make_shared<sphere>(point3(0, 0, -1), 0.5, material_center));
+    world.add(std::make_shared<sphere>(point3(-1, 0, -1), 0.5, material_left));
+    world.add(std::make_shared<sphere>(point3(1, 0, -1), 0.5, material_right));
 
     // Camera
     
-    double viewport_height = 2.0;
-    double viewport_width = aspect_ratio * viewport_height;
-    double focal_length = 1.0;
-
-    point3 origin(0, 0, 0);
-    vec3<> horizontal(viewport_width, 0, 0);
-    vec3<> vertical(0, viewport_height, 0);
-    point3 lower_left_corner = origin - horizontal / 2 - vertical / 2
-                               - vec3<>(0, 0, focal_length);
-
+    camera cam;
+    
     // Render
     
     fout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
@@ -97,14 +128,24 @@ int main (int argc, char * argv[]) {
     for (int j = image_height; j >= 0; --j) {
 
         std::cerr << "\nScanlines remaning: " << j << ' ' << std::flush;
+
         for (int i = 0; i < image_width; ++i) {
 
-            double u = static_cast<double>(i) / (image_width - 1);
-            double v = static_cast<double>(j) / (image_height - 1);
+            color pixel_color(0.0, 0.0, 0.0);
 
-            ray r(origin, lower_left_corner + u * horizontal + v * vertical - origin);
-            color pixel_color = ray_color(r, world);
-            write_color(fout, pixel_color);
+            for (int s = 0; s < samples_per_pixel; ++s) {
+
+                double u = (static_cast<double>(i) + random_double()) /
+                            static_cast<double>(image_width - 1);
+
+                double v = (static_cast<double>(j) + random_double()) /
+                            static_cast<double>(image_height - 1);
+
+                ray r = cam.get_ray(u, v);
+                pixel_color += ray_color(r, world, max_depth);
+            }
+
+            write_color(fout, pixel_color, samples_per_pixel);
         }
     }
 

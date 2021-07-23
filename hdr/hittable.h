@@ -3,12 +3,25 @@
     #include "ray.h"
 #endif
 
+#ifndef MEMORY
+#define MEMORY
+    #include <memory>
+#endif
+
+#ifndef MATERIAL_H
+#define MATERIAL_H
+    #include "material.h"
+#endif
+
+class material;
+
 struct hit_record {
 
     point3 p;
     vec3<> normal;
     double t;
     bool front_face;
+    std::shared_ptr<const material> mat_ptr;
 
     inline void set_face_normal(const ray& r,
                                 const vec3<>& outward_normal) {
@@ -22,6 +35,7 @@ class hittable {
 
 public:
 
+    hittable() = default;
     virtual bool hit(const ray& r, double t_min,
                      double t_max, hit_record& rec) const = 0;
 

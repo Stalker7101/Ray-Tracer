@@ -1,5 +1,17 @@
-#include <cmath>
-#include <iostream>
+#ifndef CMATH
+#define CMATH
+    #include <cmath>
+#endif
+
+#ifndef IOSTREAM
+#define IOSTREAM
+    #include <iostream>
+#endif
+
+#ifndef USEFUL_H
+#define USEFUL_H
+    #include "useful.h"
+#endif
 
 enum VecMode {Vector3, RGB};
 
@@ -17,6 +29,8 @@ public:
     double y() const;
     double z() const;
 
+    bool near_zero() const;
+
     vec3<M> operator -  ()      const;
     double  operator [] (int i) const;
     double& operator [] (int i);
@@ -30,6 +44,13 @@ public:
 
     double length()         const;
     double length_squared() const;
+
+    inline static vec3<M> random();
+    inline static vec3<M> random(double min, double max);
+    static vec3<M> random_in_unit_spheree();
+    static vec3<M> random_in_hemisphere(const vec3<M>& normal);
+    static vec3<M> random_unit_vector();
+    static vec3<M> reflect(const vec3<M>& v, const vec3<M>&);
 
     ~vec3() = default;
 
@@ -66,6 +87,13 @@ template <VecMode M>
 double vec3<M>::z() const {
 
     return e[2];
+}
+
+template <VecMode M>
+bool vec3<M>::near_zero() const {
+
+    const static double s = 1e-8;
+    return (std::abs(e[0]) < s) && (std::abs(e[1]) < s) && (std::abs(e[2]) < s);
 }
 
 template <VecMode M>
@@ -138,6 +166,58 @@ template <VecMode M>
 double vec3<M>::length() const {
 
     return std::sqrt(length_squared());
+}
+
+template <VecMode M>
+inline vec3<M> vec3<M>::random() {
+
+    return vec3<M>(random_double(), random_double(), random_double());
+}
+
+template <VecMode M>
+inline vec3<M> vec3<M>::random(double min, double max) {
+
+    return vec3<M>(random_double(min, max),
+                   random_double(min, max),
+                   random_double(min, max));
+}
+
+template <VecMode M>
+vec3<M> vec3<M>::random_in_unit_spheree() {
+
+    while (true) {
+        vec3<M> p = vec3<M>::random(-1, 1);
+        if (p.length_squared() >= 1) continue;
+        return p;
+    }
+}
+
+template <VecMode M>
+vec3<M> vec3<M>::random_in_hemisphere(const vec3<M>& normal) {
+
+    vec3<M> in_unit_spheree = vec3<M>::random_in_unit_spheree();
+
+    // in the same hemisphere as th normal
+    if (dot(in_unit_spheree, normal) > 0.0) {
+
+        return in_unit_spheree;
+
+    } else {
+
+        return -in_unit_spheree;
+    }
+}
+
+template <VecMode M>
+vec3<M> vec3<M>::random_unit_vector() {
+
+    return unit_vector(random_in_unit_spheree());
+}
+
+template <VecMode M>
+vec3<M> vec3<M>::reflect(const vec3<M>& v, const vec3<M>& n) {
+
+    return v - 2 * dot(v, n) * n;
 }
 
 template <VecMode M>
